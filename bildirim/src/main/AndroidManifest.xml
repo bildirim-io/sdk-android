@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application>
+
+        <!--
+          FCM mesajlarını alan servis. priority=-1: müşterinin kendi FirebaseMessagingService'i
+          varsa (varsayılan öncelik 0) sistem onunkini seçer; müşteri o servisten
+          Bildirim.setToken / Bildirim.handleRemoteMessage çağırır (docs/KENDI-SERVISINIZ-VARSA.md).
+        -->
+        <service
+            android:name="io.bildirim.sdk.internal.BildirimMessagingService"
+            android:directBootAware="false"
+            android:exported="false">
+            <intent-filter android:priority="-1">
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!--
+          Tıklama noktası. Android 12+ "notification trampoline" yasağı: bildirimden Activity
+          yalnız Activity PendingIntent'iyle başlatılabilir; BroadcastReceiver'dan startActivity
+          engellenir. Bu görünmez Activity olayı raporlar, hedefi açar ve hemen kapanır.
+        -->
+        <activity
+            android:name="io.bildirim.sdk.internal.BildirimClickActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
+
+        <!-- Android 13+ POST_NOTIFICATIONS izni için saydam köprü Activity -->
+        <activity
+            android:name="io.bildirim.sdk.internal.BildirimPermissionActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- Kaydırarak silme (dismissed) olayı -->
+        <receiver
+            android:name="io.bildirim.sdk.internal.BildirimDismissReceiver"
+            android:exported="false" />
+
+    </application>
+</manifest>

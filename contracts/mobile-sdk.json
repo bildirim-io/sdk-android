@@ -1,0 +1,190 @@
+{
+    "version": 2,
+    "payloadKey": "bildirim",
+    "fields": {
+        "c": "campaignId — ölçüm ve tekrar bastırma için",
+        "t": "ölçüm jetonu — /v1/mobile/events isteğinin `t` alanı; abone bazında imzalı",
+        "u": "tıklama adresi (deep link ya da https)",
+        "i": "büyük görsel adresi (isteğe bağlı)",
+        "ic": "ikon adresi (isteğe bağlı)",
+        "ti": "başlık — YALNIZ FCM data-only yükünde (APNs'te aps.alert.title)",
+        "b": "gövde — YALNIZ FCM data-only yükünde (APNs'te aps.alert.body)",
+        "a": "aksiyon düğmeleri [{ id, l: etiket, u?: adres }] en çok 3 — u yoksa düğme bildirimin `u`sunu açar; SDK tıklamada id'yi bildirir (isteğe bağlı)"
+    },
+    "fcm": {
+        "dataOnly": true,
+        "priority": "HIGH",
+        "example": {
+            "message": {
+                "token": "<cihaz jetonu>",
+                "data": {
+                    "bildirim": "{\"c\":\"3f2a…\",\"t\":\"eyJ…\",\"u\":\"https://ornek.com/haber/1\",\"i\":\"https://ornek.com/g.jpg\",\"a\":[{\"id\":\"oku\",\"l\":\"Oku\"},{\"id\":\"kaydet\",\"l\":\"Sonra oku\",\"u\":\"https://ornek.com/kaydet/1\"}],\"ti\":\"Başlık\",\"b\":\"Gövde\"}"
+                },
+                "android": {
+                    "priority": "HIGH",
+                    "collapse_key": "<campaignId>",
+                    "ttl": "3600s"
+                }
+            }
+        }
+    },
+    "apns": {
+        "mutableContent": 1,
+        "pushType": "alert",
+        "example": {
+            "aps": {
+                "alert": {
+                    "title": "Başlık",
+                    "body": "Gövde"
+                },
+                "sound": "default",
+                "mutable-content": 1,
+                "badge": 3
+            },
+            "bildirim": {
+                "c": "3f2a…",
+                "t": "eyJ…",
+                "u": "https://ornek.com/haber/1",
+                "i": "https://ornek.com/g.jpg",
+                "a": [
+                    {
+                        "id": "oku",
+                        "l": "Oku"
+                    },
+                    {
+                        "id": "kaydet",
+                        "l": "Sonra oku",
+                        "u": "https://ornek.com/kaydet/1"
+                    }
+                ]
+            }
+        },
+        "hosts": {
+            "production": "https://api.push.apple.com",
+            "sandbox": "https://api.sandbox.push.apple.com"
+        },
+        "actions": {
+            "dynamicCategoryPrefix": "bildirim_",
+            "serverSendsCategory": false
+        }
+    },
+    "baseUrl": "https://api.bildirim.io",
+    "endpoints": {
+        "subscribe": {
+            "method": "POST",
+            "path": "/v1/subscribe",
+            "body": [
+                "projectKey",
+                "channel",
+                "token",
+                "installationId",
+                "apnsEnvironment",
+                "appVersion",
+                "sdkVersion",
+                "os",
+                "timezone",
+                "externalId",
+                "tags",
+                "country"
+            ],
+            "notes": [
+                "Origin başlığı GÖNDERİLMEZ; mobil kanallarda aranmaz.",
+                "Aynı jetonla tekrar güvenli (upsert). tags birleştirilir; null değer siler.",
+                "externalId: null → logout.",
+                "installationId: SDK'nın ürettiği rastgele UUID; jeton yenilenince eski satır taşınır.",
+                "apnsEnvironment yalnız iOS: aps-environment entitlement'ından okunur."
+            ],
+            "responses": {
+                "201": "{ id, status: \"subscribed\" }",
+                "400": "bad_request — şema (issues alanı)",
+                "401": "unauthorized — pk_ geçersiz/iptal",
+                "402": "quota_exceeded — plan abone sınırı (yalnız YENİ kayıtta)",
+                "403": "forbidden — o kanalın kimlik bilgileri panelde yok (mesaj yol gösterir)",
+                "429": "rate_limited / quarantined — retry-after başlığı"
+            }
+        },
+        "unsubscribe": {
+            "method": "POST",
+            "path": "/v1/unsubscribe",
+            "body": [
+                "projectKey",
+                "channel",
+                "token"
+            ],
+            "responses": {
+                "200": "{ status: \"unsubscribed\" }"
+            }
+        },
+        "notificationEvent": {
+            "method": "POST",
+            "path": "/v1/mobile/events",
+            "body": [
+                "projectKey",
+                "channel",
+                "token",
+                "t",
+                "event",
+                "actionId"
+            ],
+            "events": [
+                "displayed",
+                "clicked",
+                "dismissed"
+            ],
+            "notes": [
+                "actionId (isteğe bağlı): clicked olayında hangi düğmeye basıldığı (a[].id); gövdeye dokunulduysa yok"
+            ],
+            "responses": {
+                "200": "{ status: \"ok\" | \"duplicate\" | \"ignored\" } — ignored HATA DEĞİL (jeton süresi geçmiş), tekrar deneme"
+            }
+        },
+        "track": {
+            "method": "POST",
+            "path": "/v1/events",
+            "body": [
+                "projectKey",
+                "channel",
+                "token",
+                "name",
+                "value",
+                "currency",
+                "properties"
+            ],
+            "notes": [
+                "name: ^[a-zA-Z0-9_.:-]+$, ≤60"
+            ],
+            "responses": {
+                "201": "{ id, attributed }"
+            }
+        },
+        "config": {
+            "method": "GET",
+            "path": "/v1/mobile/config?key=pk_…",
+            "responses": {
+                "200": "{ projectName, iconUrl, topics: [{ key, label }] }"
+            }
+        },
+        "contract": {
+            "method": "GET",
+            "path": "/v1/mobile/contract",
+            "responses": {
+                "200": "bu nesne"
+            }
+        }
+    },
+    "clientRules": {
+        "reregisterOnlyWhen": [
+            "ilk kayıt (izin sonrası)",
+            "jeton değişti (onNewToken / didRegisterForRemoteNotifications)",
+            "login/logout/setTags çağrıldı",
+            "son başarılı kayıttan 24 saat geçti"
+        ],
+        "deviceRateLimits": {
+            "subscribe": "20/dk/cihaz",
+            "notificationEvent": "30/dk/cihaz",
+            "track": "60/dk/cihaz"
+        },
+        "offlineQueue": "setTags/login/track ağ yokken kuyruğa; sıralı boşaltma",
+        "noAdvertisingId": true
+    }
+}

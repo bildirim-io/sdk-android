@@ -1,0 +1,16 @@
+[versions]
+agp = "9.0.1"
+firebaseMessaging = "24.1.2"
+googleServices = "4.4.4"
+junit = "4.13.2"
+robolectric = "4.15.1"
+
+[libraries]
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging", version.ref = "firebaseMessaging" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+
+[plugins]
+android-library = { id = "com.android.library", version.ref = "agp" }
+android-application = { id = "com.android.application", version.ref = "agp" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }

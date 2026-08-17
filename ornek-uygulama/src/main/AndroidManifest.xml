@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:name=".OrnekApp"
+        android:allowBackup="false"
+        android:icon="@android:drawable/ic_dialog_email"
+        android:label="Bildirim Örnek"
+        android:theme="@android:style/Theme.Material.Light">
+
+        <!-- Durum çubuğu ikonu (isteğe bağlı; yoksa uygulama ikonu kullanılır) -->
+        <meta-data android:name="io.bildirim.sdk.small_icon" android:resource="@android:drawable/ic_dialog_email" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Deep link: bildirimornek://haber/1 → bu ekran -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="bildirimornek" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
