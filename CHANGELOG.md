@@ -11,4 +11,7 @@
   actionId, title, body, image, icon`), kendi servisi olanlar için `onNewToken`/`onMessageReceived`,
   servis adı `io.bildirim.sdk.internal.MessagingService`.
 - Enstrümantasyon testleri (`connectedDebugAndroidTest`) ve CI (birim + sözleşme + emülatör).
+- Yayın (Faz E) hazır: `maven-publish` + koşullu `signing`, sources + javadoc jar (Central
+  zorunlu), `scripts/release-android.sh` Central Portal bundle akışı — imza hattı test
+  anahtarıyla doğrulandı (5 `.asc`).
 - Sözleşme sürümü 3.

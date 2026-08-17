@@ -38,6 +38,9 @@ android {
     publishing {
         singleVariant("release") {
             withSourcesJar()
+            // Maven Central sources VE javadoc jar'ı zorunlu tutar (Portal doğrulaması reddeder).
+            // Kotlin kaynaklarında javadoc boş üretilir; kabul edilen yaygın uygulama budur.
+            withJavadocJar()
         }
     }
 }
