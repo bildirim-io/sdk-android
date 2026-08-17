@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     `maven-publish`
+    signing
 }
 
 group = property("GROUP") as String
@@ -58,7 +59,15 @@ dependencies {
     androidTestImplementation(libs.androidx.test.uiautomator)
 }
 
+// Yayın (Faz E): Sonatype Central Portal "bundle" yükleme akışı — scripts/release-android.sh
+// Yerel Maven deposu (build/maven-repo) üretilir, imzalanır, zip'lenir ve Portal'a yüklenir.
 publishing {
+    repositories {
+        maven {
+            name = "bundle"
+            url = uri(layout.buildDirectory.dir("maven-repo"))
+        }
+    }
     publications {
         register<MavenPublication>("release") {
             groupId = project.group.toString()
@@ -70,8 +79,25 @@ publishing {
                 description.set("Bildirim (bildirim.io) push bildirim SDK'sı — Android")
                 url.set("https://bildirim.io")
                 licenses { license { name.set("MIT"); url.set("https://opensource.org/licenses/MIT") } }
-                scm { url.set("https://github.com/bildirim-io/sdk-android") }
+                developers { developer { id.set("bildirim"); name.set("Bildirim"); email.set("destek@bildirim.io") } }
+                scm {
+                    url.set("https://github.com/bildirim-io/sdk-android")
+                    connection.set("scm:git:https://github.com/bildirim-io/sdk-android.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/bildirim-io/sdk-android.git")
+                }
             }
         }
+    }
+}
+
+// İmza yalnız anahtar verildiyse (CI/yayın makinesi). Geliştirici makinesinde build kırılmaz.
+// SIGNING_KEY: ASCII-armored özel anahtar (gpg --armor --export-secret-keys), SIGNING_PASSWORD: parolası.
+signing {
+    val key = System.getenv("SIGNING_KEY") ?: findProperty("signing.key") as String?
+    val pass = System.getenv("SIGNING_PASSWORD") ?: findProperty("signing.password") as String?
+    isRequired = key != null
+    if (key != null) {
+        useInMemoryPgpKeys(key, pass ?: "")
+        sign(publishing.publications)
     }
 }
