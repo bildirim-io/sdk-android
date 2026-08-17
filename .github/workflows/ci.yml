@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Sözleşme ayrışmasını kendi başına yakala: sunucu sürümü artarsa CI kırmızıya döner.
+    - cron: '17 6 * * 1'
+
+jobs:
+  birim-testleri:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Kütüphane + birim testleri
+        run: ./gradlew :bildirim:assembleRelease :bildirim:testDebugUnitTest --console=plain
+      - name: POM'da firebase bağımlılığı OLMAMALI (compileOnly)
+        run: |
+          ./gradlew :bildirim:publishToMavenLocal --console=plain
+          pom=$(find ~/.m2/repository/io/bildirim -name '*.pom' | head -1)
+          echo "POM: $pom"
+          if grep -q firebase "$pom"; then echo "POM'a firebase sızmış"; exit 1; fi
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-raporu
+          path: bildirim/build/reports/tests/
+
+  sozlesme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vendored sözleşme == canlı /v1/mobile/contract
+        run: scripts/check-contract.sh
+
+  enstrumantasyon:
+    # Bildirim çizimi/kanal/izin gerçek Android'de (Robolectric'in göstermediği davranışlar)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Emülatörde androidTest
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          script: ./gradlew :bildirim:connectedDebugAndroidTest --console=plain

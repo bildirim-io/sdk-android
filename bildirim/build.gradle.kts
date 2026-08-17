@@ -13,6 +13,7 @@ android {
     defaultConfig {
         minSdk = 21
         consumerProguardFiles("consumer-rules.pro")
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -47,6 +48,14 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
+
+    // Yalnız enstrümantasyon testleri (APK'ya girmez, kütüphaneyle yayınlanmaz):
+    // Robolectric'in göstermediği davranışlar — kanal gerçekten oluştu mu, bildirim gerçekten
+    // durum çubuğuna düştü mü, izin akışı.
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.test.uiautomator)
 }
 
 publishing {

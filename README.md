@@ -91,10 +91,17 @@ manifest'ten çıkarın (`io.bildirim.sdk.internal.MessagingService`, `tools:nod
 ## Geliştirme
 
 ```bash
-./gradlew :bildirim:assembleRelease :bildirim:testDebugUnitTest   # kütüphane + birim testleri
+./gradlew :bildirim:assembleRelease :bildirim:testDebugUnitTest   # kütüphane + birim testleri (Robolectric)
+./gradlew :bildirim:connectedDebugAndroidTest                     # emülatörde çizim/kanal/izin
 ./gradlew :ornek-uygulama:installDebug                            # google-services.json gerekir
 scripts/check-contract.sh                                          # vendored sözleşme == canlı
 ```
+
+Birim testleri Robolectric ile koşar (Firebase test çalışma zamanında YOK — `compileOnly`
+olduğunu doğruluyor). Enstrümantasyon testleri Robolectric'in göstermediği katmanı ölçer:
+kanalın sistemde gerçekten oluşması ve bildirimin gerçekten düşmesi. Android 13+ izin verilmemiş
+cihazda `notify()` sessizce düşer — testler izni açıkça verir, SDK da aynı kapıyı kontrol edip
+izin yoksa "gösterildi" olayını göndermez.
 
 Sözleşme: `contracts/mobile-sdk.json` (ana depodan kopya; `GET /v1/mobile/contract` aynısını
 döner). `ContractTest` koddaki sabitleri dosyayla karşılaştırır; **`DocSurfaceTest`** yayındaki

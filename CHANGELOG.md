@@ -10,4 +10,5 @@
   `setNotificationOpenedHandler`/`setForegroundHandler` (bildirim nesnesi: `campaignId, url,
   actionId, title, body, image, icon`), kendi servisi olanlar için `onNewToken`/`onMessageReceived`,
   servis adı `io.bildirim.sdk.internal.MessagingService`.
+- Enstrümantasyon testleri (`connectedDebugAndroidTest`) ve CI (birim + sözleşme + emülatör).
 - Sözleşme sürümü 3.
