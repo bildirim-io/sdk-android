@@ -34,6 +34,7 @@ class MainActivity : Activity() {
         button("track(satin_alma, 149.9 TRY)") { Bildirim.track("satin_alma", value = 149.9, currency = "TRY", properties = mapOf("urun" to "deneme")) }
         button("unsubscribe()") { Bildirim.unsubscribe() }
         button("subscribe()") { Bildirim.subscribe() }
+        button("Yerel test bildirimi (sunucusuz)") { localTestNotification() }
         button("Yenile") { }
 
         setContentView(ScrollView(this).apply { addView(root) })
@@ -65,6 +66,17 @@ class MainActivity : Activity() {
             appendLine()
             appendLine("Ayrıntı için: adb logcat -s Bildirim:* Ornek:*")
         }
+    }
+
+    /**
+     * Sunucu olmadan çizimi denemek için: sözleşmedeki FCM örneğine benzer bir data-only mesajı
+     * doğrudan SDK'ya verir (FirebaseMessagingService'in yapacağı çağrının aynısı).
+     */
+    private fun localTestNotification() {
+        val raw = """{"c":"yerel-test","t":"yerel-jeton","ti":"Bildirim örnek","b":"Bu bildirim sunucusuz, SDK tarafından çizildi.",""" +
+            """"u":"bildirimornek://haber/1","i":"https://bildirim.io/og.png",""" +
+            """"a":[{"id":"oku","l":"Oku"},{"id":"kaydet","l":"Sonra oku","u":"https://bildirim.io"}]}"""
+        Thread { Bildirim.handleRemoteMessage(this, mapOf("bildirim" to raw)) }.start()
     }
 
     private fun toast(msg: String) = android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show()
