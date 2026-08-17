@@ -6,7 +6,7 @@ package io.bildirim.sdk.internal
  * sürüm ve alan adlarını karşılaştırır — bir taraf değişince test kırılır; istenen budur.
  */
 internal object Contract {
-    const val VERSION = 2
+    const val VERSION = 3
 
     /** FCM `data` içindeki JSON dizgesinin anahtarı. */
     const val PAYLOAD_KEY = "bildirim"

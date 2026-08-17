@@ -1,5 +1,5 @@
 {
-    "version": 2,
+    "version": 3,
     "payloadKey": "bildirim",
     "fields": {
         "c": "campaignId — ölçüm ve tekrar bastırma için",
@@ -170,6 +170,23 @@
             "responses": {
                 "200": "bu nesne"
             }
+        }
+    },
+    "sdk": {
+        "android": {
+            "artifact": "io.bildirim:bildirim-android",
+            "repo": "https://github.com/bildirim-io/sdk-android",
+            "latest": "1.0.0",
+            "minSdk": 21,
+            "released": false
+        },
+        "ios": {
+            "package": "https://github.com/bildirim-io/sdk-ios",
+            "product": "Bildirim",
+            "pod": "Bildirim",
+            "latest": "1.0.0",
+            "minIos": "13.0",
+            "released": false
         }
     },
     "clientRules": {
