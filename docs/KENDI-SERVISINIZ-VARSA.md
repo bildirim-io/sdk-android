@@ -5,22 +5,22 @@ Android tek bir `FirebaseMessagingService` seçer. SDK'nın servisi manifestte
 **sizinkini** çağırır ve SDK hiçbir mesaj görmez. İki satır ekleyin:
 
 ```kotlin
-class MyMessagingService : FirebaseMessagingService() {
+class BenimServisim : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
-        Bildirim.setToken(this, token)
+        Bildirim.onNewToken(token)
         // kendi işleriniz…
     }
     override fun onMessageReceived(message: RemoteMessage) {
-        if (Bildirim.handleRemoteMessage(this, message.data)) return   // Bildirim'e aitse SDK işledi
+        if (Bildirim.onMessageReceived(message)) return   // Bildirim'den geldi, SDK çizdi
         // kendi mesajlarınız…
     }
 }
 ```
 
-`handleRemoteMessage` mesaj Bildirim'den değilse (`data.bildirim` yoksa) dokunmaz ve `false` döner.
+`onMessageReceived` yalnız `data.bildirim` taşıyan mesajları üstlenir ve `true` döner; diğerlerine dokunmaz.
 
 İsterseniz SDK'nın servisini tamamen kaldırabilirsiniz:
 
 ```xml
-<service android:name="io.bildirim.sdk.internal.BildirimMessagingService" tools:node="remove" />
+<service android:name="io.bildirim.sdk.internal.MessagingService" tools:node="remove" />
 ```

@@ -1,6 +1,6 @@
 package io.bildirim.sdk
 
-/** Bildirimdeki bir aksiyon düğmesi (`a[]`). `url` yoksa düğme bildirimin kendi adresini açar. */
+/** Bildirimdeki bir aksiyon düğmesi. `url` yoksa düğme bildirimin kendi adresini açar. */
 public data class BildirimAction(
     val id: String,
     val label: String,
@@ -8,48 +8,51 @@ public data class BildirimAction(
 )
 
 /**
- * Sunucudan gelen `bildirim` sözlüğünün çözümlenmiş hâli. Handler'lara bu verilir.
- * Alan adları sözleşmedeki kısa anahtarların açılımıdır (c→campaignId, t→eventToken, …).
+ * Bir Bildirim mesajının çözümlenmiş hâli — handler'lara bu verilir.
+ *
+ * ```kotlin
+ * Bildirim.setNotificationOpenedHandler { bildirim ->
+ *     startActivity(Intent(this, HaberActivity::class.java).putExtra("url", bildirim.url))
+ *     true
+ * }
+ * ```
  */
 public data class BildirimNotification(
+    /** Kampanya kimliği (sunucudaki `c`). */
     val campaignId: String?,
-    val eventToken: String?,
     val title: String?,
     val body: String?,
+    /** Tıklanınca açılacak adres; aksiyon düğmesine basıldıysa düğmenin adresi (yoksa bildirimin). */
     val url: String?,
-    val imageUrl: String?,
-    val iconUrl: String?,
-    val actions: List<BildirimAction>,
+    /** Büyük görsel adresi. */
+    val image: String?,
+    /** Bildirim simgesi adresi. */
+    val icon: String?,
+    /** Basılan aksiyon düğmesinin kimliği — yalnız tıklama handler'ında ve yalnız düğmeye basıldıysa. */
+    val actionId: String? = null,
+    /** Bildirimdeki aksiyon düğmeleri (en çok 3). */
+    val actions: List<BildirimAction> = emptyList(),
+    /** Ölçüm jetonu (sunucudaki `t`) — SDK kullanır. */
+    val eventToken: String? = null,
     /** Ham `bildirim` JSON dizgesi — ileride eklenecek alanlar için. */
-    val raw: String,
+    val raw: String = "",
 ) {
     /** Bildirim ve aksiyonlar için tekil kimlik: campaignId, yoksa eventToken, yoksa raw. */
     internal val notificationId: Int
         get() = (campaignId ?: eventToken ?: raw).hashCode()
 }
 
-/** Kullanıcı bildirime (ya da bir aksiyon düğmesine) dokunduğunda handler'a verilen bilgi. */
-public data class BildirimOpenResult(
-    val notification: BildirimNotification,
-    /** Dokunulan aksiyon düğmesinin kimliği; gövdeye dokunulduysa null. */
-    val actionId: String?,
-    /** Açılması beklenen adres: aksiyonun `url`'i, yoksa bildirimin `url`'i, yoksa null. */
-    val url: String?,
-)
-
 /**
- * Bildirim tıklandığında çağrılır. `true` dönerse uygulama yönlendirmeyi kendisi yapmıştır,
- * SDK adresi açmaz. `false` dönerse SDK `url`'i açar (deep link → uygulama, https → tarayıcı,
- * yoksa uygulamanın ana ekranı).
+ * Bildirime (ya da bir aksiyon düğmesine) dokunulduğunda ana iş parçacığında çağrılır.
+ * `true` dönerse SDK varsayılan açmayı yapmaz — yönlendirmeyi siz yaptınız.
  */
 public fun interface NotificationOpenedHandler {
-    public fun onOpened(result: BildirimOpenResult): Boolean
+    public fun onOpened(notification: BildirimNotification): Boolean
 }
 
 /**
- * Uygulama ön plandayken bir bildirim geldiğinde çağrılır. `true` → SDK bildirimi çizer,
- * `false` → çizmez (uygulama içeriği kendi arayüzünde gösterebilir; bu durumda "gösterildi"
- * ölçümü de yapılmaz).
+ * Uygulama ön plandayken bildirim geldiğinde çağrılır. `true` → SDK bildirimi çizer,
+ * `false` → çizmez (bu durumda "gösterildi" ölçümü de yapılmaz).
  */
 public fun interface ForegroundHandler {
     public fun onForeground(notification: BildirimNotification): Boolean

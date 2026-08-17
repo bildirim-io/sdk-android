@@ -8,33 +8,28 @@ dayatmaz, panele girdiğiniz service account ile gönderim yapılır.
 - Min SDK 21, hedef 36. Bağımlılık: yalnız `firebase-messaging` (sürümünü siz seçersiniz).
 - androidx / OkHttp / coroutines **yok** — uygulamanızın sürümleriyle çakışmaz.
 - Reklam kimliği (AAID) **toplanmaz**. Toplananlar: cihaz jetonu, SDK'nın ürettiği kurulum
-  kimliği, uygulama/SDK sürümü, saat dilimi, ülke kodu (bkz. `docs/PLAY-DATA-SAFETY.md`).
+  kimliği, uygulama/SDK sürümü, saat dilimi, ülke kodu (bkz. `DATA-SAFETY.md`).
 
 ## Kurulum
 
 1. Firebase Console'da uygulamanız için `google-services.json` alın; Panel → Ayarlar → Mobil
-   Push'a **service account JSON**'unu yükleyip **Doğrula**'ya basın.
-2. `settings.gradle.kts` → `google()` ve `mavenCentral()` zaten vardır. Uygulama modülü:
+   Push'a **service account JSON**'unu yükleyip **Doğrula**'ya basın (doğrulanmadan kayıt 403 döner).
+2. Uygulama modülü:
 
 ```kotlin
-plugins {
-    id("com.android.application")
-    id("com.google.gms.google-services")
-}
 dependencies {
-    implementation("io.bildirim:bildirim-android:0.1.0")
-    implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
-    implementation("com.google.firebase:firebase-messaging")
+    implementation("io.bildirim:bildirim-android:1.0.0")
+    implementation("com.google.firebase:firebase-messaging:24.0.0") // sizde zaten varsa dokunmayın
 }
 ```
 
 3. `Application.onCreate`:
 
 ```kotlin
-class App : Application() {
+class UygulamaniZ : Application() {
     override fun onCreate() {
         super.onCreate()
-        Bildirim.initialize(this, "pk_...")   // Panel → Ayarlar → Anahtarlar
+        Bildirim.initialize(this, "pk_sizin_anahtariniz")   // Panel → Ayarlar → API anahtarları
     }
 }
 ```
@@ -51,21 +46,27 @@ uçtan uca deneyin.
 ## API
 
 ```kotlin
-Bildirim.initialize(context, BildirimConfig(appKey = "pk_...", apiBase = "https://api.bildirim.io",
-    channelId = "bildirim_default", channelName = "Bildirimler", smallIconRes = R.drawable.ic_stat, accentColor = 0xFF0055FF.toInt()))
-Bildirim.requestPermission(activity) { granted -> }
+Bildirim.initialize(this, "pk_...", BildirimConfig(
+    apiBase = "https://api.sirketiniz.com",   // kendi sunucunuz
+    channelName = "Son dakika",
+    smallIcon = R.drawable.ic_stat_bildirim,   // tek renkli, saydam arka plan
+    accentColor = R.color.marka,               // renk KAYNAĞI
+))
+Bildirim.requestPermission { granted -> }
 Bildirim.login("kullanici-42");  Bildirim.logout()
-Bildirim.setTags(mapOf("sehir" to "istanbul", "eski" to null))   // null → siler
-Bildirim.track("satin_alma", value = 149.9, currency = "TRY", properties = mapOf("urun" to "x"))
+Bildirim.setTags(mapOf("sehir" to "istanbul", "plan" to null))   // null → siler
+Bildirim.track("satin_alma", mapOf("value" to 149.9, "currency" to "TRY"))
 Bildirim.unsubscribe();  Bildirim.subscribe()
-Bildirim.setNotificationOpenedHandler { result -> /* result.notification, result.actionId, result.url */ false }
-Bildirim.setForegroundHandler { notification -> true }  // true → SDK çizsin
+Bildirim.setNotificationOpenedHandler { bildirim -> /* bildirim.url, .campaignId, .actionId */ true }
+Bildirim.setForegroundHandler { bildirim -> true }  // true → SDK çizsin
 Bildirim.getToken(); Bildirim.getInstallationId(); Bildirim.getExternalId(); Bildirim.getTags()
 ```
 
 `setNotificationOpenedHandler` `false` dönerse SDK adresi açar: uygulamanız `url`'i işliyorsa
 (deep link / app link) uygulama, https ise tarayıcı, yoksa ana ekran (`Intent` extra
 `io.bildirim.sdk.url`). `true` dönerseniz yönlendirmeyi siz yapmışsınızdır.
+
+Bildirim nesnesi: `campaignId, url, actionId, title, body, image, icon` (+ `actions`).
 
 ## Nasıl çalışır
 
@@ -83,8 +84,9 @@ Bildirim.getToken(); Bildirim.getInstallationId(); Bildirim.getExternalId(); Bil
 
 ## Kendi FirebaseMessagingService'iniz varsa
 
-`docs/KENDI-SERVISINIZ-VARSA.md` — iki satır: `onNewToken` → `Bildirim.setToken(this, token)`,
-`onMessageReceived` → `if (Bildirim.handleRemoteMessage(this, message.data)) return`.
+`docs/KENDI-SERVISINIZ-VARSA.md` — iki satır: `onNewToken` → `Bildirim.onNewToken(token)`,
+`onMessageReceived` → `if (Bildirim.onMessageReceived(message)) return`; ardından SDK'nın servisini
+manifest'ten çıkarın (`io.bildirim.sdk.internal.MessagingService`, `tools:node="remove"`).
 
 ## Geliştirme
 
@@ -95,6 +97,8 @@ scripts/check-contract.sh                                          # vendored s�
 ```
 
 Sözleşme: `contracts/mobile-sdk.json` (ana depodan kopya; `GET /v1/mobile/contract` aynısını
-döner). `ContractTest` koddaki sabitleri dosyayla karşılaştırır.
+döner). `ContractTest` koddaki sabitleri dosyayla karşılaştırır; **`DocSurfaceTest`** yayındaki
+`bildirim.io/dokumanlar/android` sayfasındaki kod bloklarını birebir derler — genel API'yi
+değiştirmek için önce dokümanı (ve ana depodaki `test/mobile-s3.mjs`'i) güncellemek gerekir.
 
 Lisans: MIT.

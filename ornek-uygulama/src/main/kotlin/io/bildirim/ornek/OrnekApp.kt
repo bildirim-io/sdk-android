@@ -11,13 +11,15 @@ class OrnekApp : Application() {
         // Panel → Ayarlar → Anahtarlar'daki pk_ anahtarınızı buraya yazın.
         Bildirim.initialize(
             this,
+            APP_KEY,
             BildirimConfig(
-                appKey = APP_KEY,
+                channelName = "Örnek bildirimler",
+                smallIcon = android.R.drawable.ic_dialog_email,
                 logLevel = BildirimConfig.LOG_DEBUG,
             ),
         )
-        Bildirim.setNotificationOpenedHandler { result ->
-            Log.i("Ornek", "bildirim açıldı: kampanya=${result.notification.campaignId} aksiyon=${result.actionId} url=${result.url}")
+        Bildirim.setNotificationOpenedHandler { bildirim ->
+            Log.i("Ornek", "bildirim açıldı: kampanya=${bildirim.campaignId} aksiyon=${bildirim.actionId} url=${bildirim.url}")
             false // false → SDK adresi açar (deep link → MainActivity, https → tarayıcı)
         }
         Bildirim.setForegroundHandler { n ->

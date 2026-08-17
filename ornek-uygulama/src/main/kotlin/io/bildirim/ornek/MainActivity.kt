@@ -31,7 +31,7 @@ class MainActivity : Activity() {
         button("logout()") { Bildirim.logout() }
         button("setTags(sehir=istanbul, plan=pro)") { Bildirim.setTags(mapOf("sehir" to "istanbul", "plan" to "pro")) }
         button("removeTags(plan)") { Bildirim.removeTags("plan") }
-        button("track(satin_alma, 149.9 TRY)") { Bildirim.track("satin_alma", value = 149.9, currency = "TRY", properties = mapOf("urun" to "deneme")) }
+        button("track(satin_alma, 149.9 TRY)") { Bildirim.track("satin_alma", mapOf("value" to 149.9, "currency" to "TRY", "urun" to "deneme")) }
         button("unsubscribe()") { Bildirim.unsubscribe() }
         button("subscribe()") { Bildirim.subscribe() }
         button("Yerel test bildirimi (sunucusuz)") { localTestNotification() }
@@ -57,7 +57,7 @@ class MainActivity : Activity() {
     private fun refresh() {
         status.text = buildString {
             appendLine("SDK: ${io.bildirim.sdk.BildirimVersion.SDK_VERSION}")
-            appendLine("Bildirimler açık: ${Bildirim.areNotificationsEnabled(this@MainActivity)}")
+            appendLine("Bildirimler açık: ${Bildirim.areNotificationsEnabled()}")
             appendLine("Jeton: ${Bildirim.getToken()?.take(24) ?: "(henüz yok)"}…")
             appendLine("Kurulum kimliği: ${Bildirim.getInstallationId()}")
             appendLine("externalId: ${Bildirim.getExternalId() ?: "-"}")
@@ -76,7 +76,7 @@ class MainActivity : Activity() {
         val raw = """{"c":"yerel-test","t":"yerel-jeton","ti":"Bildirim örnek","b":"Bu bildirim sunucusuz, SDK tarafından çizildi.",""" +
             """"u":"bildirimornek://haber/1","i":"https://bildirim.io/og.png",""" +
             """"a":[{"id":"oku","l":"Oku"},{"id":"kaydet","l":"Sonra oku","u":"https://bildirim.io"}]}"""
-        Thread { Bildirim.handleRemoteMessage(this, mapOf("bildirim" to raw)) }.start()
+        Thread { Bildirim.onMessageReceived(mapOf("bildirim" to raw)) }.start()
     }
 
     private fun toast(msg: String) = android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show()

@@ -26,13 +26,13 @@ class PayloadTest {
     @Test fun `asgari yuk`() {
         val n = Payload.parse(mapOf("bildirim" to """{"c":"k1","t":"tok","ti":"Selam"}"""))!!
         assertEquals("k1", n.campaignId); assertEquals("tok", n.eventToken); assertEquals("Selam", n.title)
-        assertNull(n.body); assertNull(n.url); assertNull(n.imageUrl); assertNull(n.iconUrl)
+        assertNull(n.body); assertNull(n.url); assertNull(n.image); assertNull(n.icon)
         assertTrue(n.actions.isEmpty())
     }
 
     @Test fun `null ve bos degerler yok sayilir`() {
         val n = Payload.parse(mapOf("bildirim" to """{"c":"k1","u":null,"i":"","b":"x"}"""))!!
-        assertNull(n.url); assertNull(n.imageUrl); assertEquals("x", n.body)
+        assertNull(n.url); assertNull(n.image); assertEquals("x", n.body)
     }
 
     @Test fun `aksiyonlar en cok uc ve eksik alanli olanlar atlanir`() {

@@ -31,13 +31,13 @@ internal object Payload {
         }
         return BildirimNotification(
             campaignId = obj.str(Contract.F_CAMPAIGN),
-            eventToken = obj.str(Contract.F_TOKEN),
             title = obj.str(Contract.F_TITLE),
             body = obj.str(Contract.F_BODY),
             url = obj.str(Contract.F_URL),
-            imageUrl = obj.str(Contract.F_IMAGE),
-            iconUrl = obj.str(Contract.F_ICON),
+            image = obj.str(Contract.F_IMAGE),
+            icon = obj.str(Contract.F_ICON),
             actions = actions,
+            eventToken = obj.str(Contract.F_TOKEN),
             raw = raw,
         )
     }

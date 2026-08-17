@@ -6,7 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import io.bildirim.sdk.Bildirim
-import io.bildirim.sdk.BildirimOpenResult
+import io.bildirim.sdk.BildirimNotification
 
 /**
  * Bildirim tıklamalarının tek giriş noktası (gövde ve aksiyon düğmeleri). Görünmez
@@ -35,11 +35,12 @@ internal class BildirimClickActivity : Activity() {
         Bildirim.internalReportEvent(this, n, Contract.EV_CLICKED, actionId)
         Bildirim.internalCancelNotification(this, notifId)
 
+        // Düğmenin kendi adresi varsa o, yoksa bildirimin adresi (doküman: "Tıklama ve deep link")
         val actionUrl = actionId?.let { id -> n.actions.firstOrNull { it.id == id }?.url }
         val url = actionUrl ?: n.url
-        val result = BildirimOpenResult(n, actionId, url)
+        val opened: BildirimNotification = n.copy(actionId = actionId, url = url)
 
-        val handled = Bildirim.internalDispatchOpened(result)
+        val handled = Bildirim.internalDispatchOpened(opened)
         if (!handled) openDefault(url)
     }
 

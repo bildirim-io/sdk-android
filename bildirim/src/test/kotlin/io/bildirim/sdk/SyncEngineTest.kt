@@ -28,7 +28,7 @@ class SyncEngineTest {
     @After fun tearDown() { api.close(); Bildirim.resetForTests() }
 
     private fun init(token: String? = "tok-1", key: String = "pk_test") {
-        Bildirim.initialize(ctx, BildirimConfig(appKey = key, apiBase = api.baseUrl, tokenProvider = FakeTokenProvider(token), logLevel = BildirimConfig.LOG_DEBUG))
+        Bildirim.initialize(ctx, key, BildirimConfig(apiBase = api.baseUrl, tokenProvider = FakeTokenProvider(token), logLevel = BildirimConfig.LOG_DEBUG))
     }
 
     private fun idle() = Bildirim.runtimeForTests()!!.sync.awaitIdle()
@@ -55,10 +55,10 @@ class SyncEngineTest {
 
     @Test fun `jeton yenilenince yeniden kayit`() {
         init(); idle()
-        Bildirim.setToken(ctx, "tok-2"); idle()
+        Bildirim.onNewToken("tok-2"); idle()
         assertEquals(2, api.requests.size)
         assertEquals("tok-2", api.requests[1].body!!.getString("token"))
-        Bildirim.setToken(ctx, "tok-2"); idle()
+        Bildirim.onNewToken("tok-2"); idle()
         assertEquals(2, api.requests.size)
     }
 
@@ -69,7 +69,7 @@ class SyncEngineTest {
         Bildirim.setTags(mapOf("sehir" to "istanbul", "yas" to 30))
         Bildirim.logout()
         Bildirim.setTags(mapOf("sehir" to null))
-        Bildirim.track("satin_alma", value = 149.9, currency = "try", properties = mapOf("urun" to "x"))
+        Bildirim.track("satin_alma", mapOf("value" to 149.9, "currency" to "try", "urun" to "x"))
         idle()
         api.requests.clear()
         api.down = false
@@ -141,7 +141,7 @@ class SyncEngineTest {
         Bildirim.login("u1"); idle()
         assertEquals(0, api.requests.size)
         assertEquals(1, Bildirim.runtimeForTests()!!.queue.size())
-        Bildirim.setToken(ctx, "tok-9"); idle()
+        Bildirim.onNewToken("tok-9"); idle()
         // login öğesi tam kayıt gövdesi taşır; ayrıca boş kayıt gönderilmez
         assertEquals(listOf("/v1/subscribe"), api.paths())
         assertEquals("u1", api.requests[0].body!!.getString("externalId"))
@@ -182,8 +182,8 @@ class SyncEngineTest {
     @Test fun `initialize olmadan servis cagrisi kalici ayarla calisir`() {
         init(); idle()
         Bildirim.resetForTests()
-        // Süreç FCM ile uyanmış, initialize koşmamış gibi: setToken kalıcı appKey ile çalışmalı
-        Bildirim.setToken(ctx, "tok-yeni")
+        // Süreç FCM ile uyanmış, initialize koşmamış gibi: servis köprüsü kalıcı appKey ile çalışmalı
+        Bildirim.internalSetToken(ctx, "tok-yeni")
         Bildirim.runtimeForTests()!!.sync.awaitIdle()
         assertNotNull(Bildirim.runtimeForTests())
         assertEquals("tok-yeni", api.requests.last().body!!.getString("token"))

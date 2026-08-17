@@ -1,12 +1,13 @@
 package io.bildirim.sdk
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import com.google.firebase.messaging.RemoteMessage
 import io.bildirim.sdk.internal.Api
 import io.bildirim.sdk.internal.BildirimPermissionActivity
-import io.bildirim.sdk.internal.Contract
 import io.bildirim.sdk.internal.DeviceInfo
 import io.bildirim.sdk.internal.FirebaseTokenProvider
 import io.bildirim.sdk.internal.Lifecycle
@@ -23,17 +24,17 @@ import org.json.JSONObject
  * Bildirim Android SDK — tek giriş noktası.
  *
  * ```kotlin
- * class App : Application() {
+ * class UygulamaniZ : Application() {
  *   override fun onCreate() {
  *     super.onCreate()
- *     Bildirim.initialize(this, "pk_...")
+ *     Bildirim.initialize(this, "pk_sizin_anahtariniz")
  *   }
  * }
- * // Bir Activity'de:
- * Bildirim.requestPermission(this) { granted -> }
- * Bildirim.login("kullanici-42"); Bildirim.setTags(mapOf("sehir" to "istanbul"))
- * Bildirim.track("satin_alma", value = 149.9, currency = "TRY")
- * Bildirim.setNotificationOpenedHandler { result -> false }
+ * // Kullanıcı bir değer gördükten sonra:
+ * Bildirim.requestPermission { granted -> }
+ * Bildirim.login("kullanici-42")
+ * Bildirim.setTags(mapOf("sehir" to "istanbul"))
+ * Bildirim.track("satin_alma", mapOf("value" to 149.9, "currency" to "TRY"))
  * ```
  *
  * Tüm çağrılar iş parçacığından bağımsızdır; ağ işleri arka planda sıralı kuyrukla yürür ve
@@ -41,11 +42,11 @@ import org.json.JSONObject
  */
 public object Bildirim {
 
-    internal class Runtime(val context: Context, val config: BildirimConfig) {
+    internal class Runtime(val context: Context, val config: BildirimConfig, val appKey: String) {
         val store = Store(context)
         val queue = Queue(store)
         val device = DeviceInfo(context)
-        val api = Api(config.apiBase, config.appKey, device)
+        val api = Api(config.apiBase, appKey, device)
         val sync = SyncEngine(context, store, queue, api, device)
         val renderer = NotificationRenderer(context, config)
         val lifecycle = Lifecycle(onForeground = { sync.syncIfNeeded() }, onNetwork = { sync.onNetworkAvailable() })
@@ -65,19 +66,20 @@ public object Bildirim {
 
     // ---- kurulum ---------------------------------------------------------------------------
 
-    /** `Application.onCreate` içinde çağırın. */
+    /** `Application.onCreate` içinde çağırın. `pk_` anahtarı: Panel → Ayarlar → API anahtarları. */
     @JvmStatic
     public fun initialize(context: Context, appKey: String) {
-        initialize(context, BildirimConfig(appKey = appKey))
+        initialize(context, appKey, BildirimConfig())
     }
 
+    /** Yapılandırmalı kurulum (kendi sunucunuz, kanal adı, simge, renk). */
     @JvmStatic
-    public fun initialize(context: Context, config: BildirimConfig) {
-        require(config.appKey.startsWith("pk_")) { "appKey 'pk_' ile başlamalı (Panel → Ayarlar → Anahtarlar)" }
+    public fun initialize(context: Context, appKey: String, config: BildirimConfig) {
+        require(appKey.startsWith("pk_")) { "appKey 'pk_' ile başlamalı (Panel → Ayarlar → API anahtarları)" }
         Log.level = config.logLevel
         val app = context.applicationContext
-        val rt = Runtime(app, config)
-        rt.store.appKey = config.appKey
+        val rt = Runtime(app, config, appKey)
+        rt.store.appKey = appKey
         rt.store.apiBase = config.apiBase
         runtime = rt
         Log.i("Bildirim SDK ${BildirimVersion.SDK_VERSION} başlatıldı (${config.apiBase})")
@@ -86,55 +88,69 @@ public object Bildirim {
         rt.lifecycle.attach(app)
 
         val provider = config.tokenProvider ?: FirebaseTokenProvider
-        provider.fetch { token -> if (token != null) setToken(app, token) }
+        provider.fetch { token -> if (token != null) internalSetToken(app, token) }
         rt.sync.syncIfNeeded()
     }
 
+    // ---- kendi FirebaseMessagingService'i olan uygulamalar için köprüler --------------------
+
     /**
-     * Uygulamanın kendi FirebaseMessagingService'i varsa `onNewToken` içinden çağırın.
-     * Aynı jeton tekrar verilirse hiçbir şey yapmaz.
+     * Kendi `FirebaseMessagingService`'inizin `onNewToken`'ından çağırın.
+     * Aynı jeton tekrar verilirse ağa çıkılmaz.
      */
     @JvmStatic
-    public fun setToken(context: Context, token: String) {
-        val rt = ensure(context) ?: return
-        if (rt.store.token == token) { rt.sync.syncIfNeeded(); return }
-        Log.i("cihaz jetonu ${if (rt.store.token == null) "alındı" else "yenilendi"}")
-        rt.store.token = token
-        rt.sync.syncIfNeeded()
+    public fun onNewToken(token: String) {
+        val ctx = runtime?.context ?: return notInit()
+        internalSetToken(ctx, token)
     }
 
     /**
-     * Uygulamanın kendi FirebaseMessagingService'i varsa `onMessageReceived` içinden
-     * `Bildirim.handleRemoteMessage(this, message.data)` çağırın. Mesaj Bildirim'e aitse işler
-     * ve `true` döner; değilse dokunmaz, `false` döner (siz işlersiniz).
+     * Kendi `FirebaseMessagingService`'inizin `onMessageReceived`'ından çağırın. Mesaj
+     * Bildirim'e aitse (`data.bildirim`) işler ve `true` döner; değilse dokunmaz, `false` döner.
      */
     @JvmStatic
-    public fun handleRemoteMessage(context: Context, data: Map<String, String>): Boolean {
+    public fun onMessageReceived(message: RemoteMessage): Boolean = onMessageReceived(message.data)
+
+    /** Ham `data` haritasıyla aynı iş (HMS gibi başka bir taşıyıcı kullanıyorsanız). */
+    @JvmStatic
+    public fun onMessageReceived(data: Map<String, String>): Boolean {
         if (!Payload.isBildirim(data)) return false
-        val rt = ensure(context) ?: return true
-        val n = Payload.parse(data) ?: return true
-        return try { rt.messages.handle(n) } catch (e: Exception) { Log.e("mesaj işlenemedi: ${e.message}", e); true }
+        val ctx = runtime?.context ?: run { notInit(); return true }
+        return internalHandleData(ctx, data)
     }
 
-    /** `data` haritası Bildirim'den mi? */
+    /** Mesaj Bildirim'den mi? */
+    @JvmStatic
+    public fun isBildirimMessage(message: RemoteMessage): Boolean = Payload.isBildirim(message.data)
+
     @JvmStatic
     public fun isBildirimMessage(data: Map<String, String>): Boolean = Payload.isBildirim(data)
 
     // ---- izin ---------------------------------------------------------------------------------
 
     /**
-     * Bildirim iznini ister (Android 13+ sistem diyaloğu; altında zaten açık). Sonuç ana iş
-     * parçacığında gelir. İzin verilince kayıt otomatik gider.
+     * Bildirim iznini ister (Android 13+ sistem penceresi; altında izin yoktur). İzin verilirse
+     * cihaz kaydı otomatik gider. Sonuç ana iş parçacığında.
+     *
+     * Uygulama açılır açılmaz değil, kullanıcı bir değer gördükten sonra çağırın.
      */
     @JvmStatic
-    public fun requestPermission(context: Context, callback: ((Boolean) -> Unit)? = null) {
+    @JvmOverloads
+    public fun requestPermission(callback: ((Boolean) -> Unit)? = null) {
+        val ctx = runtime?.context ?: run { notInit(); callback?.invoke(false); return }
+        requestPermission(ctx, callback)
+    }
+
+    /** Belirli bir context (Activity) ile izin isteme. */
+    @JvmStatic
+    public fun requestPermission(context: Context, callback: ((Boolean) -> Unit)?) {
         val rt = ensure(context) ?: run { callback?.invoke(false); return }
         val deliver: (Boolean) -> Unit = { granted ->
             if (granted) rt.sync.syncIfNeeded()
             callback?.let { cb -> main.post { cb(granted) } }
         }
         if (Build.VERSION.SDK_INT < 33) { deliver(rt.sync.notificationsEnabled()); return }
-        if (context.checkSelfPermission(BildirimPermissionActivity.PERMISSION) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        if (context.checkSelfPermission(BildirimPermissionActivity.PERMISSION) == PackageManager.PERMISSION_GRANTED) {
             deliver(true); return
         }
         BildirimPermissionActivity.launch(context, deliver)
@@ -142,12 +158,15 @@ public object Bildirim {
 
     /** Bildirimler bu uygulama için açık mı (izin + sistem ayarı). */
     @JvmStatic
-    public fun areNotificationsEnabled(context: Context): Boolean =
-        ensure(context)?.sync?.notificationsEnabled() ?: false
+    @JvmOverloads
+    public fun areNotificationsEnabled(context: Context? = null): Boolean {
+        val rt = context?.let { ensure(it) } ?: runtime ?: return false
+        return rt.sync.notificationsEnabled()
+    }
 
     // ---- kimlik / etiket / olay ------------------------------------------------------------
 
-    /** Kullanıcıyı dış kimlikle eşle (giriş). */
+    /** Kullanıcıyı dış kimlikle eşle (giriş). Sunucudan `externalIds` ile hedeflenir. */
     @JvmStatic
     public fun login(externalId: String) {
         val rt = runtime ?: return notInit()
@@ -166,8 +185,8 @@ public object Bildirim {
     }
 
     /**
-     * Etiketleri birleştirerek yaz. Değeri `null` olan anahtar sunucuda silinir.
-     * Değerler String/Number/Boolean olabilir.
+     * Etiketleri birleştirerek yaz — her çağrıda hepsini göndermeniz gerekmez.
+     * Değeri `null` olan anahtar sunucuda silinir. Değerler String/Number/Boolean olabilir.
      */
     @JvmStatic
     public fun setTags(tags: Map<String, Any?>) {
@@ -187,7 +206,7 @@ public object Bildirim {
         rt.sync.enqueueSubscribe(JSONObject().put("tags", json))
     }
 
-    /** Etiket sil (kısayol: değerleri null olan setTags). */
+    /** Etiket sil (kısayol: değerleri null olan [setTags]). */
     @JvmStatic
     public fun removeTags(vararg keys: String) {
         setTags(keys.associateWith { null })
@@ -204,23 +223,35 @@ public object Bildirim {
     }
 
     /**
-     * Özel olay (dönüşüm). `name`: `^[a-zA-Z0-9_.:-]+$`, en çok 60 karakter.
-     * Kampanya ilişkilendirmesini sunucu yapar (`attributed`).
+     * Özel olay (dönüşüm). Son 24 saatte tıklanan kampanyaya sunucu tarafından bağlanır.
+     * `properties` içindeki `value` (sayı) ve `currency` (3 harf) ciro olarak raporlanır.
+     *
+     * `name`: `^[a-zA-Z0-9_.:-]+$`, en çok 60 karakter.
      */
     @JvmStatic
     @JvmOverloads
-    public fun track(name: String, value: Double? = null, currency: String? = null, properties: Map<String, Any?>? = null) {
+    public fun track(name: String, properties: Map<String, Any?>? = null) {
         val rt = runtime ?: return notInit()
         if (!EVENT_NAME.matches(name)) { Log.e("track: geçersiz olay adı '$name' (izinli: harf, rakam, _ . : - ; ≤60)"); return }
-        val props = properties?.takeIf { it.isNotEmpty() }?.let { m ->
-            JSONObject().also { j -> m.forEach { (k, v) -> j.put(k, v ?: JSONObject.NULL) } }
+        var value: Double? = null
+        var currency: String? = null
+        var props: JSONObject? = null
+        properties?.forEach { (k, v) ->
+            when {
+                k == "value" && v is Number -> value = v.toDouble()
+                k == "currency" && v is String -> currency = v.take(3).uppercase()
+                else -> {
+                    val j = props ?: JSONObject().also { props = it }
+                    j.put(k, v ?: JSONObject.NULL)
+                }
+            }
         }
-        rt.sync.enqueueTrack(name, value, currency?.take(3)?.uppercase(), props)
+        rt.sync.enqueueTrack(name, value, currency, props)
     }
 
     // ---- abonelik ------------------------------------------------------------------------------
 
-    /** `unsubscribe()` sonrası yeniden abone ol. İlk kayıt için gerekmez; izin yeterli. */
+    /** [unsubscribe] sonrası yeniden abone ol. İlk kayıt için gerekmez; izin yeterli. */
     @JvmStatic
     public fun subscribe() {
         val rt = runtime ?: return notInit()
@@ -229,7 +260,7 @@ public object Bildirim {
         rt.sync.enqueueSubscribe(null)
     }
 
-    /** Aboneliği sonlandır: sunucudaki kayıt pasifleşir, otomatik yeniden kayıt durur. */
+    /** Kullanıcı bildirimleri kapattı: sunucudaki kayıt pasifleşir, otomatik yeniden kayıt durur. */
     @JvmStatic
     public fun unsubscribe() {
         val rt = runtime ?: return notInit()
@@ -238,15 +269,15 @@ public object Bildirim {
         rt.sync.enqueueUnsubscribe()
     }
 
-    /** Kullanıcı `unsubscribe()` çağırdı mı. */
+    /** Kullanıcı [unsubscribe] çağırdı mı. */
     @JvmStatic
     public fun isOptedOut(): Boolean = runtime?.store?.optedOut ?: false
 
-    /** Bilinen cihaz jetonu (henüz alınmadıysa null). */
+    /** Bilinen FCM cihaz jetonu (henüz alınmadıysa null). */
     @JvmStatic
     public fun getToken(): String? = runtime?.store?.token
 
-    /** SDK'nın ürettiği kurulum kimliği. */
+    /** SDK'nın ürettiği kalıcı kurulum kimliği (reklam kimliği DEĞİL). */
     @JvmStatic
     public fun getInstallationId(): String? = runtime?.store?.installationId
 
@@ -256,15 +287,33 @@ public object Bildirim {
 
     // ---- handler'lar ------------------------------------------------------------------------
 
-    /** Bildirime dokunulduğunda (gövde ya da aksiyon düğmesi). Ana iş parçacığında çağrılır. */
+    /**
+     * Bildirime (ya da aksiyon düğmesine) dokunulduğunda ana iş parçacığında çağrılır.
+     * `true` dönerse SDK varsayılan açmayı yapmaz.
+     */
     @JvmStatic
     public fun setNotificationOpenedHandler(handler: NotificationOpenedHandler?) { openedHandler = handler }
 
-    /** Uygulama ön plandayken bildirim gelince. `true` → SDK çizer. */
+    /** Uygulama ön plandayken bildirim gelince. `true` → SDK çizsin. */
     @JvmStatic
     public fun setForegroundHandler(handler: ForegroundHandler?) { foregroundHandler = handler }
 
-    // ---- iç köprüler (Activity/Receiver'dan) ------------------------------------------------
+    // ---- iç köprüler ------------------------------------------------------------------------
+
+    internal fun internalSetToken(context: Context, token: String) {
+        val rt = ensure(context) ?: return
+        if (rt.store.token == token) { rt.sync.syncIfNeeded(); return }
+        Log.i("cihaz jetonu ${if (rt.store.token == null) "alındı" else "yenilendi"}")
+        rt.store.token = token
+        rt.sync.syncIfNeeded()
+    }
+
+    internal fun internalHandleData(context: Context, data: Map<String, String>): Boolean {
+        if (!Payload.isBildirim(data)) return false
+        val rt = ensure(context) ?: return true
+        val n = Payload.parse(data) ?: return true
+        return try { rt.messages.handle(n) } catch (e: Exception) { Log.e("mesaj işlenemedi: ${e.message}", e); true }
+    }
 
     internal fun internalReportEvent(context: Context, n: BildirimNotification, event: String, actionId: String?) {
         val rt = ensure(context) ?: return
@@ -277,16 +326,16 @@ public object Bildirim {
     }
 
     /** Döner: uygulama yönlendirmeyi üstlendi mi. */
-    internal fun internalDispatchOpened(result: BildirimOpenResult): Boolean {
+    internal fun internalDispatchOpened(notification: BildirimNotification): Boolean {
         val h = openedHandler ?: return false
-        return try { h.onOpened(result) } catch (e: Exception) { Log.w("opened handler hata: ${e.message}"); false }
+        return try { h.onOpened(notification) } catch (e: Exception) { Log.w("opened handler hata: ${e.message}"); false }
     }
 
     // ---- yardımcılar ------------------------------------------------------------------------
 
     /**
      * Çalışma zamanını getirir; `initialize` çağrılmadıysa (süreç FCM tarafından uyandırıldı ama
-     * uygulama Application.onCreate'te başlatmıyor) kalıcı ayarlardan yeniden kurar.
+     * uygulama `Application.onCreate`'te başlatmıyor) kalıcı ayarlardan yeniden kurar.
      */
     private fun ensure(context: Context): Runtime? {
         runtime?.let { return it }
@@ -299,7 +348,11 @@ public object Bildirim {
                 return null
             }
             Log.w("initialize çağrılmadan kullanıldı; kalıcı ayarlarla devam ediliyor")
-            val rt = Runtime(context.applicationContext, BildirimConfig(appKey = key, apiBase = store.apiBase ?: BildirimConfig.DEFAULT_API_BASE))
+            val rt = Runtime(
+                context.applicationContext,
+                BildirimConfig(apiBase = store.apiBase ?: BildirimConfig.DEFAULT_API_BASE),
+                key,
+            )
             runtime = rt
             rt.lifecycle.attach(context.applicationContext)
             return rt

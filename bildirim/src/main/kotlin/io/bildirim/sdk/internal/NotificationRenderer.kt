@@ -47,7 +47,7 @@ internal class NotificationRenderer(private val context: Context, private val co
             .setOnlyAlertOnce(true)
             .setContentIntent(clickIntent(n, id, null, 0))
             .setDeleteIntent(dismissIntent(n, id))
-        if (config.accentColor != 0) builder.setColor(config.accentColor)
+        accentColor()?.let { builder.setColor(it) }
         if (Build.VERSION.SDK_INT < 26) {
             builder.setPriority(Notification.PRIORITY_HIGH).setDefaults(Notification.DEFAULT_ALL)
         }
@@ -100,8 +100,21 @@ internal class NotificationRenderer(private val context: Context, private val co
         return f
     }
 
+    /** Vurgu rengi renk KAYNAĞI olarak verilir (doküman: `accentColor = R.color.marka`). */
+    private fun accentColor(): Int? {
+        if (config.accentColor == 0) return null
+        return try {
+            @Suppress("DEPRECATION")
+            if (Build.VERSION.SDK_INT >= 23) context.resources.getColor(config.accentColor, context.theme)
+            else context.resources.getColor(config.accentColor)
+        } catch (e: Exception) {
+            // Kaynak değil de doğrudan ARGB verilmişse onu kullan
+            config.accentColor
+        }
+    }
+
     private fun smallIcon(): Int {
-        if (config.smallIconRes != 0) return config.smallIconRes
+        if (config.smallIcon != 0) return config.smallIcon
         try {
             val ai = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
             val res = ai.metaData?.getInt(META_SMALL_ICON, 0) ?: 0

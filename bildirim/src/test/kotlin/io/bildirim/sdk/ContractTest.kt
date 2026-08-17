@@ -59,7 +59,7 @@ class ContractTest {
         assertEquals("Başlık", n.title)
         assertEquals("Gövde", n.body)
         assertEquals("https://ornek.com/haber/1", n.url)
-        assertEquals("https://ornek.com/g.jpg", n.imageUrl)
+        assertEquals("https://ornek.com/g.jpg", n.image)
         assertNotNull(n.campaignId); assertNotNull(n.eventToken)
         assertEquals(2, n.actions.size)
         assertEquals("oku", n.actions[0].id); assertEquals("Oku", n.actions[0].label); assertEquals(null, n.actions[0].url)

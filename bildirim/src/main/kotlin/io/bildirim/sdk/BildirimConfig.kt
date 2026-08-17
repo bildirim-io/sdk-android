@@ -1,33 +1,36 @@
 package io.bildirim.sdk
 
 /**
- * SDK yapılandırması. Yalnız [appKey] zorunlu; diğerleri makul varsayılanlarla gelir.
+ * SDK yapılandırması (isteğe bağlı). Anahtar [Bildirim.initialize]'a ayrı verilir.
  *
  * ```kotlin
- * Bildirim.initialize(this, BildirimConfig(appKey = "pk_..."))
+ * Bildirim.initialize(this, "pk_...", BildirimConfig(
+ *     channelName = "Son dakika",
+ *     smallIcon = R.drawable.ic_stat_bildirim,
+ *     accentColor = R.color.marka,
+ * ))
  * ```
  */
 public class BildirimConfig(
-    /** Panel → Ayarlar → Anahtarlar'daki genel anahtar (`pk_…`). */
-    public val appKey: String,
-    /** API adresi. Self-hosted kurulumda değiştirin. Sonundaki eğik çizgi kaldırılır. */
+    /** API adresi. Kendi sunucunuzda çalışan Bildirim için değiştirin. */
     apiBase: String = DEFAULT_API_BASE,
     /** Bildirim kanalı kimliği (Android 8+). Değiştirirseniz eski kanal kullanıcı ayarlarında kalır. */
     public val channelId: String = "bildirim_default",
     /** Kanalın kullanıcıya görünen adı (Ayarlar → Bildirimler). */
     public val channelName: CharSequence = "Bildirimler",
     /**
-     * Durum çubuğundaki küçük ikon (drawable kaynağı). Verilmezse manifest'teki
-     * `io.bildirim.sdk.small_icon` meta-data'sına, o da yoksa uygulama ikonuna düşer.
+     * Durum çubuğundaki tek renkli küçük simge (drawable kaynağı, ör. `R.drawable.ic_stat_bildirim`).
+     * Verilmezse manifest'teki `io.bildirim.sdk.small_icon` meta-data'sı, o da yoksa uygulama simgesi
+     * kullanılır — bazı cihazlarda beyaz kare görünür, bir simge çizip vermeniz önerilir.
      */
-    public val smallIconRes: Int = 0,
-    /** Bildirim vurgu rengi (ARGB). 0 → sistem varsayılanı. */
+    public val smallIcon: Int = 0,
+    /** Bildirim vurgu rengi — **renk kaynağı** (ör. `R.color.marka`). 0 → sistem varsayılanı. */
     public val accentColor: Int = 0,
     /** Log seviyesi: [LOG_NONE], [LOG_ERROR], [LOG_INFO], [LOG_DEBUG]. */
     public val logLevel: Int = LOG_INFO,
     /**
      * Ön plandayken bildirim çizilsin mi (handler verilmediyse). Varsayılan true: FCM data-only
-     * mesajlarda sistem hiçbir şey çizmez; false yaparsanız ön planda bildirim görünmez.
+     * mesajlarda sistem hiçbir şey çizmez.
      */
     public val showInForeground: Boolean = true,
     /** Jeton kaynağı. Varsayılan Firebase; yalnız test/özel kurulum için değiştirin. */

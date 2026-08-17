@@ -13,7 +13,7 @@
           Bildirim.setToken / Bildirim.handleRemoteMessage çağırır (docs/KENDI-SERVISINIZ-VARSA.md).
         -->
         <service
-            android:name="io.bildirim.sdk.internal.BildirimMessagingService"
+            android:name="io.bildirim.sdk.internal.MessagingService"
             android:directBootAware="false"
             android:exported="false">
             <intent-filter android:priority="-1">

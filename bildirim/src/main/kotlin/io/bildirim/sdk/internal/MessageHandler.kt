@@ -27,8 +27,8 @@ internal class MessageHandler(
                 return true
             }
         }
-        val icon = n.iconUrl?.let { ImageLoader.load(it, 3_000) }
-        val image = n.imageUrl?.let { ImageLoader.load(it, 8_000) }
+        val icon = n.icon?.let { ImageLoader.load(it, 3_000) }
+        val image = n.image?.let { ImageLoader.load(it, 8_000) }
         renderer.show(n, image, icon)
         if (sync.notificationsEnabled()) {
             n.eventToken?.let { sync.enqueueEvent(it, Contract.EV_DISPLAYED, null) }
