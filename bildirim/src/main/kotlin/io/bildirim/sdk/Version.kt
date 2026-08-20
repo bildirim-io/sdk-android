@@ -6,5 +6,5 @@ package io.bildirim.sdk
  * ContractTest de eşitliği doğrular).
  */
 public object BildirimVersion {
-    public const val SDK_VERSION: String = "1.0.0"
+    public const val SDK_VERSION: String = "1.0.1"
 }

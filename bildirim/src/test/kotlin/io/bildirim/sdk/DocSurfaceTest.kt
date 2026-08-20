@@ -132,11 +132,34 @@ class DocSurfaceTest {
         )
     }
 
-    /** Sürüm dokümandaki ve sözleşmedeki sürümle aynı olmalı. */
-    @Test fun `surum sozlesmedeki sdk bloguyla ayni`() {
+    /**
+     * Koordinat ve sürüm sözleşmedeki `sdk.android` bloğuyla tutarlı olmalı.
+     *
+     * Sürümde kural **eşitlik değil, "geride olmama"**: doküman ve panel `latest`i gösterir,
+     * depo o sürümü üretebilmelidir. Depo **ileride** olabilir — bu yayın penceresidir
+     * (bump → yayın → sunucuda `latest` güncellenir). Eşitlik şart koşulunca her sürüm
+     * çıkışında depo kaçınılmaz olarak kırmızıya düşüyordu.
+     */
+    @Test fun `surum sozlesmedeki sdk bloguyla tutarli`() {
         val sdk = contractJson().getJSONObject("sdk").getJSONObject("android")
-        assertEquals(BildirimVersion.SDK_VERSION, sdk.getString("latest"))
         assertEquals("io.bildirim:bildirim-android", sdk.getString("artifact"))
         assertEquals(21, sdk.getInt("minSdk"))
+
+        val latest = sdk.getString("latest")
+        val ours = BildirimVersion.SDK_VERSION
+        assertTrue(
+            "SDK sürümü ($ours) sözleşmedeki latest ($latest) GERİSİNDE olamaz — " +
+                "doküman ve panel o sürümü gösteriyor, depo onu üretemiyor demektir.",
+            semver(ours) >= semver(latest),
+        )
+        if (semver(ours) > semver(latest)) {
+            println("NOT: SDK $ours, sözleşme $latest — yayın penceresi (yayınlayıp sunucuda latest'i güncelleyin).")
+        }
+    }
+
+    /** "1.0.10" > "1.0.9" olsun diye dizge değil sayısal karşılaştırma (Kotlin'de List karşılaştırılamaz). */
+    private fun semver(v: String): Long {
+        val p = v.split('-')[0].split('.').map { it.toLongOrNull() ?: 0L }
+        return p.getOrElse(0) { 0L } * 1_000_000 + p.getOrElse(1) { 0L } * 1_000 + p.getOrElse(2) { 0L }
     }
 }

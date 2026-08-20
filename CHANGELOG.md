@@ -1,6 +1,15 @@
 # Değişiklikler
 
-## 1.0.0 — yayına hazır (Maven Central etiketi bekliyor)
+## 1.0.1 — kimlik doğrulama (1.0.0 bunsuz yayınlandı)
+
+- `Bildirim.login(externalId, identityHash = imza)`. **1.0.0 Maven Central'a bu olmadan çıktı**
+  (kimlik doğrulama commit'i o an itilmemişti); Central kalıcı olduğu için düzeltme bu sürümde.
+  Dokümandaki `login(externalId, identityHash)` imzası 1.0.1 ile çalışır.
+- Yayın betiği artık kirli ağaç / itilmemiş commit varsa duruyor.
+- Sürüm testi eşitlik yerine "sözleşmedeki `latest`in gerisinde olmama" kuralına geçti;
+  bump ile yayın arasındaki pencere artık depoyu kırmızıya düşürmüyor.
+
+## 1.0.0 — Maven Central'da (2026-08-18)
 
 - İlk sürüm: kurulum, izin akışı (Android 13+), jeton + kurulum kimliği, `login/logout/setTags/track`,
   data-only bildirim çizimi (görsel, ikon, en çok 3 aksiyon düğmesi), gösterim/tıklama/kapatma
