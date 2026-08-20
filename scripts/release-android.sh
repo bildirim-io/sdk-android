@@ -20,6 +20,24 @@ grep -q "SDK_VERSION: String = \"$VERSION\"" bildirim/src/main/kotlin/io/bildiri
   || { echo "Version.kt ile gradle.properties farklı — scripts/bump-version.sh $VERSION"; exit 1; }
 scripts/check-contract.sh
 
+# Yayınlanan sürüm, ÇALIŞMA AĞACINDAN değil commit'lenmiş koddan derlenmeli ve o commit
+# uzakta olmalı — 1.0.0, itilmemiş bir kimlik-doğrulama commit'i varken yayınlandı ve eksik çıktı.
+# Maven Central kalıcı olduğu için bu kapı DRY_RUN'da bile uyarır, yayında durdurur.
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "Çalışma ağacı kirli — önce commit edin (yayınlanan paket commit'lenmiş koddan derlenir)." >&2
+  [ -z "${DRY_RUN:-}" ] && exit 1
+fi
+if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+  AHEAD=$(git rev-list --count '@{u}'..HEAD)
+  if [ "$AHEAD" != "0" ]; then
+    echo "İtilmemiş $AHEAD commit var — önce 'git push origin main':" >&2
+    git log --oneline '@{u}'..HEAD >&2
+    [ -z "${DRY_RUN:-}" ] && exit 1
+  fi
+else
+  echo "UYARI: uzak dal ayarlı değil (git push -u origin main)." >&2
+fi
+
 if [ -z "${SIGNING_KEY:-}" ] && [ -z "${DRY_RUN:-}" ]; then
   echo "SIGNING_KEY yok — Central imzasız paketi reddeder. DRY_RUN=1 ile yalnız paket üretebilirsiniz." >&2; exit 1
 fi
