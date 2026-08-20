@@ -58,6 +58,19 @@ TOKEN=$(printf '%s:%s' "$CENTRAL_USER" "$CENTRAL_PASS" | base64)
 DEPLOY_ID=$(curl -fsS -X POST "https://central.sonatype.com/api/v1/publisher/upload?name=bildirim-android-$VERSION&publishingType=AUTOMATIC" \
   -H "Authorization: Bearer $TOKEN" -F "bundle=@$BUNDLE")
 echo "Deployment: $DEPLOY_ID"
-echo "Durum: curl -H 'Authorization: Bearer $TOKEN' -X POST 'https://central.sonatype.com/api/v1/publisher/status?id=$DEPLOY_ID'"
+# Not: aynı sürüm için ikinci kez çalıştırırsanız Central "currently being published in another
+# deployment" diyerek FAILED verir — bu, ilk yüklemenin iyi gittiği anlamına gelir; ilk
+# deployment id'sinin durumuna bakın.
+# Jetonu EKRANA BASMA: terminal geçmişine, CI loguna, kopyalanan çıktıya sızar.
+# (Bir kez basıldı ve o jeton iptal edilmek zorunda kaldı.)
+cat <<DURUM
+Durumu sorgulamak için (jeton ortam değişkeninden okunur, ekrana yazılmaz):
+
+  TOKEN=\$(printf '%s:%s' "\$CENTRAL_USER" "\$CENTRAL_PASS" | base64)
+  curl -s -H "Authorization: Bearer \$TOKEN" -X POST \\
+    'https://central.sonatype.com/api/v1/publisher/status?id=$DEPLOY_ID' | python3 -m json.tool
+
+ya da: scripts/release-status.sh $DEPLOY_ID
+DURUM
 echo "Yayınlanınca (10–30 dk): https://repo1.maven.org/maven2/io/bildirim/bildirim-android/$VERSION/"
 echo "Sonra ana depoda: sdk.android.released = true (RUNBOOK §9f5)"
