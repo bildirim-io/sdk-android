@@ -66,12 +66,20 @@ class DocSurfaceTest {
     @Test fun `kimlik etiket olay`() {
         Bildirim.initialize(ctx, "pk_test", BildirimConfig(apiBase = api.baseUrl, tokenProvider = FakeTokenProvider("tok")))
         Bildirim.login("kullanici-42")
+        val imza = "b1a2c3"                                  // sunucunuzun ürettiği HMAC-SHA256 (hex)
+        Bildirim.login("kullanici-42", identityHash = imza)  // proje "kimlik doğrulama" istiyorsa zorunlu
         Bildirim.logout()
         Bildirim.setTags(mapOf("sehir" to "istanbul", "plan" to "premium"))
         Bildirim.setTags(mapOf("plan" to null))
         Bildirim.track("satin_alma", mapOf("value" to 149.9, "currency" to "TRY"))
         Bildirim.unsubscribe()
         Bildirim.runtimeForTests()!!.sync.awaitIdle()
+
+        val imzali = api.requests.first { it.path == "/v1/subscribe" && it.body!!.has("identityHash") }.body!!
+        assertEquals("kullanici-42", imzali.getString("externalId"))
+        assertEquals("b1a2c3", imzali.getString("identityHash"))
+        val imzasiz = api.requests.first { it.path == "/v1/subscribe" && it.body!!.has("externalId") && !it.body!!.has("identityHash") }.body!!
+        assertEquals("kullanici-42", imzasiz.getString("externalId"))
 
         val track = api.requests.last { it.path == "/v1/events" }.body!!
         assertEquals("satin_alma", track.getString("name"))

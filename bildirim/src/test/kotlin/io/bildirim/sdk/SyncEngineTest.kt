@@ -149,6 +149,18 @@ class SyncEngineTest {
         assertTrue(Bildirim.runtimeForTests()!!.store.lastSyncAt > 0)
     }
 
+    /** Kimlik doğrulama açık projede imzasız login: 403 döner, öğe düşer, kuyruk tıkanmaz. */
+    @Test fun `identity_verification_required kalici hata olarak duser`() {
+        init(); idle()
+        api.enqueue("/v1/subscribe", 403, """{"error":"identity_verification_required","message":"İmza gerekli"}""")
+        Bildirim.login("u1"); idle()
+        assertEquals("/v1/subscribe", api.paths().last())
+        assertEquals(0, Bildirim.runtimeForTests()!!.queue.size())
+        // Sonraki çağrılar akmaya devam eder
+        Bildirim.track("olay"); idle()
+        assertEquals("/v1/events", api.paths().last())
+    }
+
     @Test fun `gecersiz olay adi reddedilir`() {
         init(); idle()
         Bildirim.track("bosluk var"); Bildirim.track("a".repeat(61)); idle()

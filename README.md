@@ -54,6 +54,7 @@ Bildirim.initialize(this, "pk_...", BildirimConfig(
 ))
 Bildirim.requestPermission { granted -> }
 Bildirim.login("kullanici-42");  Bildirim.logout()
+Bildirim.login("kullanici-42", identityHash = imza)   // proje "kimlik doğrulama" istiyorsa zorunlu
 Bildirim.setTags(mapOf("sehir" to "istanbul", "plan" to null))   // null → siler
 Bildirim.track("satin_alma", mapOf("value" to 149.9, "currency" to "TRY"))
 Bildirim.unsubscribe();  Bildirim.subscribe()
@@ -102,6 +103,11 @@ olduğunu doğruluyor). Enstrümantasyon testleri Robolectric'in göstermediği 
 kanalın sistemde gerçekten oluşması ve bildirimin gerçekten düşmesi. Android 13+ izin verilmemiş
 cihazda `notify()` sessizce düşer — testler izni açıkça verir, SDK da aynı kapıyı kontrol edip
 izin yoksa "gösterildi" olayını göndermez.
+
+**Kimlik doğrulama:** panelde Ayarlar → Anahtarlar → Kimlik doğrulama açıksa `login` çağrısında
+imza zorunludur — `HMAC-SHA256(proje kimlik sırrı, externalId)` (hex). İmzayı **sizin sunucunuz**
+üretir; sırrı uygulamaya gömmeyin. İmzasız çağrı `403 identity_verification_required` alır ve
+kullanıcı kimliği kaydedilmez (SDK bunu logda açıkça yazar).
 
 Sözleşme: `contracts/mobile-sdk.json` (ana depodan kopya; `GET /v1/mobile/contract` aynısını
 döner). `ContractTest` koddaki sabitleri dosyayla karşılaştırır; **`DocSurfaceTest`** yayındaki

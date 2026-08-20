@@ -84,6 +84,7 @@
                 "os",
                 "timezone",
                 "externalId",
+                "identityHash",
                 "tags",
                 "country"
             ],
@@ -92,7 +93,8 @@
                 "Aynı jetonla tekrar güvenli (upsert). tags birleştirilir; null değer siler.",
                 "externalId: null → logout.",
                 "installationId: SDK'nın ürettiği rastgele UUID; jeton yenilenince eski satır taşınır.",
-                "apnsEnvironment yalnız iOS: aps-environment entitlement'ından okunur."
+                "apnsEnvironment yalnız iOS: aps-environment entitlement'ından okunur.",
+                "identityHash: proje ayarında \"kimlik doğrulama\" AÇIKSA externalId ile birlikte zorunlu — HMAC-SHA256(proje kimlik sırrı, externalId), hex. İmzayı MÜŞTERİNİN SUNUCUSU üretir; sır uygulamaya gömülmez. Eksikse uç 403 identity_verification_required döner."
             ],
             "responses": {
                 "201": "{ id, status: \"subscribed\" }",
@@ -178,7 +180,10 @@
             "repo": "https://github.com/bildirim-io/sdk-android",
             "latest": "1.0.0",
             "minSdk": 21,
-            "released": false
+            "released": false,
+            "api": {
+                "login": "login(externalId, identityHash?) — proje kimlik doğrulama istiyorsa ikinci parametre zorunlu"
+            }
         },
         "ios": {
             "package": "https://github.com/bildirim-io/sdk-ios",
@@ -186,7 +191,10 @@
             "pod": "Bildirim",
             "latest": "1.0.0",
             "minIos": "13.0",
-            "released": false
+            "released": false,
+            "api": {
+                "login": "login(externalId, identityHash?) — proje kimlik doğrulama istiyorsa ikinci parametre zorunlu"
+            }
         }
     },
     "clientRules": {

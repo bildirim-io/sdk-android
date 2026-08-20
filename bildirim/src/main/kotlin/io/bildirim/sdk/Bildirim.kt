@@ -8,6 +8,7 @@ import android.os.Looper
 import com.google.firebase.messaging.RemoteMessage
 import io.bildirim.sdk.internal.Api
 import io.bildirim.sdk.internal.BildirimPermissionActivity
+import io.bildirim.sdk.internal.Contract
 import io.bildirim.sdk.internal.DeviceInfo
 import io.bildirim.sdk.internal.FirebaseTokenProvider
 import io.bildirim.sdk.internal.Lifecycle
@@ -166,14 +167,29 @@ public object Bildirim {
 
     // ---- kimlik / etiket / olay ------------------------------------------------------------
 
-    /** Kullanıcıyı dış kimlikle eşle (giriş). Sunucudan `externalIds` ile hedeflenir. */
+    /**
+     * Kullanıcıyı dış kimlikle eşle (giriş). Sunucudan `externalIds` ile hedeflenir.
+     *
+     * Panelde **Ayarlar → Anahtarlar → Kimlik doğrulama** açıksa [identityHash] zorunludur:
+     * `HMAC-SHA256(proje kimlik sırrı, externalId)` (hex) ve bu imzayı **sizin sunucunuz**
+     * üretir — sırrı uygulamaya gömmeyin. İmzasız çağrı `403 identity_verification_required`
+     * alır ve kullanıcı kimliği kaydedilmez.
+     *
+     * ```kotlin
+     * Bildirim.login("kullanici-42")
+     * Bildirim.login("kullanici-42", identityHash = imza)
+     * ```
+     */
     @JvmStatic
-    public fun login(externalId: String) {
+    @JvmOverloads
+    public fun login(externalId: String, identityHash: String? = null) {
         val rt = runtime ?: return notInit()
         val id = externalId.trim()
         if (id.isEmpty() || id.length > 255) { Log.e("login: externalId 1–255 karakter olmalı"); return }
         rt.store.externalId = id
-        rt.sync.enqueueSubscribe(JSONObject().put("externalId", id))
+        val delta = JSONObject().put("externalId", id)
+        identityHash?.trim()?.takeIf { it.isNotEmpty() }?.let { delta.put(Contract.F_IDENTITY_HASH, it) }
+        rt.sync.enqueueSubscribe(delta)
     }
 
     /** Dış kimliği kaldır (çıkış). Cihaz abone kalır; yalnız kullanıcı bağı kopar. */

@@ -14,4 +14,11 @@
 - Yayın (Faz E) hazır: `maven-publish` + koşullu `signing`, sources + javadoc jar (Central
   zorunlu), `scripts/release-android.sh` Central Portal bundle akışı — imza hattı test
   anahtarıyla doğrulandı (5 `.asc`).
+- **Kimlik doğrulama**: `Bildirim.login(externalId, identityHash = imza)` — imza
+  `HMAC-SHA256(proje kimlik sırrı, externalId)` (hex), müşterinin sunucusu üretir; `/v1/subscribe`
+  gövdesine `identityHash` eklendi, `403 identity_verification_required` yol gösteren mesajla
+  raporlanıyor ve kuyruğu tıkamıyor.
+- `scripts/check-contract.sh` artık **içeriği** karşılaştırıyor: sunucu sürümü 3'te tutup gövdeye
+  alan eklediğinde yalnız sürüme bakan kontrol bunu kaçırmıştı.
+- Enstrümantasyon testindeki yarış giderildi (`notify()` asenkron; artık bekleniyor).
 - Sözleşme sürümü 3.

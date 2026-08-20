@@ -46,7 +46,7 @@ class ContractTest {
         val fields = (0 until e.length()).map { e.getString(it) }.toSet()
         // apnsEnvironment yalnız iOS; geri kalan hepsi Android gövdesinde
         val expected = fields - "apnsEnvironment"
-        val ours = setOf("projectKey", "channel", "token", "installationId", "appVersion", "sdkVersion", "os", "timezone", "externalId", "tags", "country")
+        val ours = setOf("projectKey", "channel", "token", "installationId", "identityHash", "appVersion", "sdkVersion", "os", "timezone", "externalId", "tags", "country")
         assertEquals(expected, ours)
     }
 
@@ -64,6 +64,17 @@ class ContractTest {
         assertEquals(2, n.actions.size)
         assertEquals("oku", n.actions[0].id); assertEquals("Oku", n.actions[0].label); assertEquals(null, n.actions[0].url)
         assertEquals("kaydet", n.actions[1].id); assertEquals("https://ornek.com/kaydet/1", n.actions[1].url)
+    }
+
+    /** Sözleşmedeki `sdk.android.api` notları SDK'da karşılığını bulmalı. */
+    @Test fun `sozlesmedeki login imzasi destekleniyor`() {
+        val api = c.getJSONObject("sdk").getJSONObject("android").optJSONObject("api")
+        assertNotNull("sözleşme sdk.android.api bloğu bekliyor", api)
+        val login = api!!.getString("login")
+        assertTrue("login imzası identityHash içermeli: $login", login.contains("identityHash"))
+        // İkinci parametre gerçekten var mı (derleme kanıtı)
+        val fn: (String, String?) -> Unit = { id, hash -> Bildirim.login(id, hash) }
+        assertNotNull(fn)
     }
 
     @Test fun `sdk surumu gradle properties ile ayni`() {

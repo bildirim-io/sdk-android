@@ -186,7 +186,15 @@ internal class SyncEngine(
         when (r.status) {
             401 -> Log.e("${item.kind}: proje anahtarı geçersiz ya da iptal edilmiş (401). appKey'i kontrol edin.")
             402 -> Log.e("${item.kind}: plan abone sınırı doldu (402). $msg")
-            403 -> Log.e("${item.kind}: $msg (403) — Panel → Ayarlar → Mobil Push")
+            403 -> if (err == Contract.ERR_IDENTITY_REQUIRED) {
+                Log.e(
+                    "login: bu proje kimlik doğrulama istiyor; imzasız çağrıda kullanıcı kimliği KAYDEDİLMEDİ. " +
+                        "Bildirim.login(externalId, identityHash = imza) kullanın — imza HMAC-SHA256(proje kimlik sırrı, " +
+                        "externalId) (hex) ve sunucunuz üretir. $msg",
+                )
+            } else {
+                Log.e("${item.kind}: $msg (403) — Panel → Ayarlar → Mobil Push")
+            }
             400 -> Log.e("${item.kind}: geçersiz istek (400) $err ${r.body?.optJSONArray("issues") ?: msg}")
             else -> Log.e("${item.kind}: reddedildi (${r.status}) $err $msg")
         }

@@ -36,6 +36,11 @@ internal object Contract {
     const val PATH_CONFIG = "/v1/mobile/config"
     const val PATH_CONTRACT = "/v1/mobile/contract"
 
+    /** Kimlik doğrulama açık projelerde `externalId` ile birlikte zorunlu imza alanı. */
+    const val F_IDENTITY_HASH = "identityHash"
+    /** İmza gerektiği hâlde gelmediğinde sunucunun döndürdüğü hata. */
+    const val ERR_IDENTITY_REQUIRED = "identity_verification_required"
+
     const val CHANNEL = "android"
     const val OS = "android"
 

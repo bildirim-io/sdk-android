@@ -27,6 +27,11 @@ internal class Api(private val apiBase: String, private val appKey: String, priv
         device.country?.let { b.put("country", it) }
         if (delta != null) {
             if (delta.has("externalId")) b.put("externalId", if (delta.isNull("externalId")) JSONObject.NULL else delta.get("externalId"))
+            // Kimlik doğrulama açık projelerde externalId ile birlikte gider; imzayı müşterinin
+            // sunucusu üretir (HMAC-SHA256(proje kimlik sırrı, externalId)), SDK yalnız taşır.
+            if (delta.has(Contract.F_IDENTITY_HASH) && !delta.isNull(Contract.F_IDENTITY_HASH)) {
+                b.put(Contract.F_IDENTITY_HASH, delta.get(Contract.F_IDENTITY_HASH))
+            }
             if (delta.has("tags")) b.put("tags", delta.get("tags"))
         }
         return b

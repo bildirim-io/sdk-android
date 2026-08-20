@@ -45,6 +45,21 @@ class NotificationInstrumentationTest {
     private val raw = """{"c":"enstrumantasyon","t":"tok","ti":"Başlık","b":"Gövde",""" +
         """"u":"https://bildirim.io","a":[{"id":"oku","l":"Oku"},{"id":"kaydet","l":"Sonra oku","u":"https://bildirim.io/x"}]}"""
 
+    /**
+     * `NotificationManager.notify()` asenkrondur: sistem servisine gider, `activeNotifications`
+     * hemen dolmayabilir. Testin ilk turu tam bu yüzden dalgalıydı (aynı kodu iki kez yayımlayan
+     * test tesadüfen geçiyordu). Kısa aralıklarla bekliyoruz.
+     */
+    private fun aktifBildirimler(bekle: Long = 3_000): List<android.service.notification.StatusBarNotification> {
+        val son = System.currentTimeMillis() + bekle
+        var list = nm.activeNotifications.filter { it.tag == NotificationRenderer.TAG }
+        while (list.isEmpty() && System.currentTimeMillis() < son) {
+            Thread.sleep(100)
+            list = nm.activeNotifications.filter { it.tag == NotificationRenderer.TAG }
+        }
+        return list
+    }
+
     @Before fun setUp() = nm.cancelAll()
     @After fun tearDown() = nm.cancelAll()
 
@@ -61,7 +76,7 @@ class NotificationInstrumentationTest {
         val n = Payload.parseRaw(raw)!!
         NotificationRenderer(ctx, BildirimConfig()).show(n)
         if (Build.VERSION.SDK_INT >= 23) {
-            val active = nm.activeNotifications.filter { it.tag == "bildirim" }
+            val active = aktifBildirimler()
             assertEquals(1, active.size)
             val notif = active[0].notification
             assertEquals("bildirim_default", if (Build.VERSION.SDK_INT >= 26) notif.channelId else "bildirim_default")
@@ -78,7 +93,7 @@ class NotificationInstrumentationTest {
         r.show(n)
         r.show(n) // görsel indikten sonraki ikinci faz
         if (Build.VERSION.SDK_INT >= 23) {
-            assertEquals(1, nm.activeNotifications.count { it.tag == "bildirim" })
+            assertEquals(1, aktifBildirimler().size)
         }
     }
 
