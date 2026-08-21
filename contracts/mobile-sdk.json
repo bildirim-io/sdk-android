@@ -178,9 +178,9 @@
         "android": {
             "artifact": "io.bildirim:bildirim-android",
             "repo": "https://github.com/bildirim-io/sdk-android",
-            "latest": "1.0.0",
+            "latest": "1.0.1",
             "minSdk": 21,
-            "released": false,
+            "released": true,
             "api": {
                 "login": "login(externalId, identityHash?) — proje kimlik doğrulama istiyorsa ikinci parametre zorunlu"
             }
@@ -191,7 +191,7 @@
             "pod": "Bildirim",
             "latest": "1.0.0",
             "minIos": "13.0",
-            "released": false,
+            "released": true,
             "api": {
                 "login": "login(externalId, identityHash?) — proje kimlik doğrulama istiyorsa ikinci parametre zorunlu"
             }
